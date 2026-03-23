@@ -1,0 +1,41 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"/><title>PetWell · Admin</title><link rel="stylesheet" href="style.css"/></head>
+<body><div class="admin-wrap"><aside class="admin-sidebar"></aside><div class="admin-main">
+  <div class="admin-topbar"><h1>Dashboard</h1><div style="display:flex;align-items:center;gap:10px"><span id="aTag" style="font-size:.82rem;color:var(--text-mute)">—</span><div id="aAv" style="width:36px;height:36px;border-radius:50%;background:var(--teal);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700">A</div></div></div>
+  <div class="admin-content">
+    <div class="stats-row fade-up">
+      <div class="stat-card"><div class="sn" id="sO">—</div><div class="sl">petOwners</div></div>
+      <div class="stat-card"><div class="sn" id="sP">—</div><div class="sl">Pets</div></div>
+      <div class="stat-card"><div class="sn" id="sB">—</div><div class="sl">Bookings</div></div>
+      <div class="stat-card"><div class="sn" id="sD">—</div><div class="sl">Deliveries</div></div>
+    </div>
+    <div class="grid2 fade-up d1">
+      <div class="panel"><div class="panel-head"><h2>Quick Actions</h2></div><div class="panel-body" style="display:flex;flex-direction:column;gap:8px">
+        <a href="adminbookings.html" class="menu-item" style="border-radius:10px;border:1px solid var(--border)"><div class="mi-icon blue" style="width:36px;height:36px;border-radius:8px;font-size:1.1rem">📅</div><div class="mi-title">Bookings</div><span class="mi-arr">›</span></a>
+        <a href="adminpets.html" class="menu-item" style="border-radius:10px;border:1px solid var(--border)"><div class="mi-icon teal" style="width:36px;height:36px;border-radius:8px;font-size:1.1rem">🐾</div><div class="mi-title">Pet Profiles</div><span class="mi-arr">›</span></a>
+        <a href="adminstore.html" class="menu-item" style="border-radius:10px;border:1px solid var(--border)"><div class="mi-icon purple" style="width:36px;height:36px;border-radius:8px;font-size:1.1rem">🛍</div><div class="mi-title">Store</div><span class="mi-arr">›</span></a>
+        <a href="admindelivery.html" class="menu-item" style="border-radius:10px;border:1px solid var(--border)"><div class="mi-icon amber" style="width:36px;height:36px;border-radius:8px;font-size:1.1rem">🚚</div><div class="mi-title">Delivery</div><span class="mi-arr">›</span></a>
+        <a href="admindrivers.html" class="menu-item" style="border-radius:10px;border:1px solid var(--border)"><div class="mi-icon green" style="width:36px;height:36px;border-radius:8px;font-size:1.1rem">🧑‍✈️</div><div class="mi-title">Drivers</div><span class="mi-arr">›</span></a>
+        <a href="admincctv.html" class="menu-item" style="border-radius:10px;border:1px solid var(--border)"><div class="mi-icon" style="background:#fde8e6;width:36px;height:36px;border-radius:8px;font-size:1.1rem">📹</div><div class="mi-title">CCTV</div><span class="mi-arr">›</span></a>
+      </div></div>
+      <div class="panel"><div class="panel-head"><h2>Recent Bookings</h2><a href="adminbookings.html" class="btn btn-sm btn-outline" style="width:auto;padding:6px 12px">View all</a></div>
+      <div class="panel-body" id="recBk"><div class="spin"></div></div></div>
+    </div>
+  </div>
+</div></div>
+<script>window.ACTIVE='admindash.html';</script><script src="adminnav.js"></script><script src="shared.js"></script>
+<script type="module">
+import{onAuth,logoutUser,getDocs2,watch}from'./firebase.js';
+window.doLogout=async()=>{await logoutUser();location.href='adminlogin.html';};
+onAuth(async u=>{
+  if(!u){location.href='adminlogin.html';return;}
+  document.getElementById('aTag').textContent=u.email;document.getElementById('aAv').textContent=u.email[0].toUpperCase();
+  try{const[o,p,b,d]=await Promise.all([getDocs2('petOwners'),getDocs2('pets'),getDocs2('bookings'),getDocs2('deliveries')]);document.getElementById('sO').textContent=o.size;document.getElementById('sP').textContent=p.size;document.getElementById('sB').textContent=b.size;document.getElementById('sD').textContent=d.size;}catch{toast('Connect Firebase to see stats','err');}
+  const BS={Pending:'badge-yellow',Confirmed:'badge-blue',Completed:'badge-green',Cancelled:'badge-red'};
+  watch('bookings',snap=>{
+    const list=[];snap.forEach(d=>list.push({id:d.id,...d.data()}));list.sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));
+    const el=document.getElementById('recBk');
+    if(!list.length){el.innerHTML='<p class="text-mute">No bookings yet.</p>';return;}
+    el.innerHTML=list.slice(0,5).map(b=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)"><div><div style="font-weight:600;font-size:.88rem">${b.petName||'—'} — ${b.service||'—'}</div><div class="text-mute" style="font-size:.74rem">${b.ownerName||'—'} · ${b.date||'—'}</div></div><span class="badge ${BS[b.status]||'badge-yellow'}">${b.status||'Pending'}</span></div>`).join('');
+  });
+});
+</script></body></html>

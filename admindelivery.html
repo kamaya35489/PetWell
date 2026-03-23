@@ -1,0 +1,62 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"/><title>PetWell · Delivery</title><link rel="stylesheet" href="style.css"/></head>
+<body><div class="admin-wrap"><aside class="admin-sidebar"></aside><div class="admin-main">
+  <div class="admin-topbar">
+    <div style="display:flex;align-items:center;gap:10px">
+      <a href="admindash.html" class="back-btn" style="background:var(--sky2);color:var(--teal)">‹</a>
+      <h1>Delivery Tracking</h1>
+    </div>
+    <span id="cntTag" class="badge badge-teal" style="font-size:.82rem">— shipments</span>
+  </div>
+  <div class="admin-content">
+    <div class="pill-row fade-up" style="margin-bottom:16px">
+      <button class="pill on" onclick="setTab('',this)">All</button>
+      <button class="pill" onclick="setTab('Processing',this)">Processing</button>
+      <button class="pill" onclick="setTab('On the Way',this)">On the Way</button>
+      <button class="pill" onclick="setTab('Delivered',this)">Delivered</button>
+      <button class="pill" onclick="setTab('Cancelled',this)">Cancelled</button>
+    </div>
+    <div class="tbl-wrap fade-up">
+      <table><thead><tr><th>#</th><th>Customer</th><th>Items</th><th>Total</th><th>Status</th><th>Update</th></tr></thead>
+      <tbody id="tbody"><tr><td colspan="6" style="text-align:center;padding:40px"><div class="spin"></div></td></tr></tbody></table>
+    </div>
+  </div>
+</div></div>
+
+<script>window.ACTIVE='admindelivery.html';</script><script src="adminnav.js"></script><script src="shared.js"></script>
+<script type="module">
+import{onAuth,logoutUser,watch,updateDoc2}from'./firebase.js';
+window.doLogout=async()=>{await logoutUser();location.href='adminlogin.html';};
+onAuth(u=>{if(!u){location.href='adminlogin.html';return;}});
+const BS={Processing:'badge-blue','On the Way':'badge-yellow',Delivered:'badge-green',Cancelled:'badge-red'};
+let all=[],tab='';
+watch('orders',snap=>{
+  all=[];snap.forEach(d=>all.push({id:d.id,...d.data()}));
+  all.sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));render();
+});
+function render(){
+  const list=tab?all.filter(o=>o.status===tab):all;
+  document.getElementById('cntTag').textContent=list.length+' shipments';
+  const tb=document.getElementById('tbody');
+  if(!list.length){tb.innerHTML='<tr><td colspan="6" style="text-align:center;padding:36px;color:var(--text-mute)">No orders found</td></tr>';return;}
+  tb.innerHTML=list.map(o=>{
+    const items=(o.items||[]).map(i=>i.name+' ×'+i.qty).join(', ')||'—';
+    return `<tr>
+      <td style="font-size:.72rem;font-weight:700;color:var(--text-mute)">${o.id.slice(0,6).toUpperCase()}</td>
+      <td><div style="font-weight:600;font-size:.88rem">${o.ownerEmail||'—'}</div></td>
+      <td class="text-mute" style="font-size:.8rem;max-width:180px">${items}</td>
+      <td style="font-weight:800;color:var(--teal)">Rs.${Number(o.totalPrice||0).toLocaleString()}</td>
+      <td><span class="badge ${BS[o.status]||'badge-blue'}">${o.status||'Processing'}</span></td>
+      <td>
+        <select class="input" style="padding:5px 8px;width:130px;font-size:.78rem" onchange="upd('${o.id}',this.value)">
+          <option ${o.status==='Processing'?'selected':''}>Processing</option>
+          <option ${o.status==='On the Way'?'selected':''}>On the Way</option>
+          <option ${o.status==='Delivered'?'selected':''}>Delivered</option>
+          <option ${o.status==='Cancelled'?'selected':''}>Cancelled</option>
+        </select>
+      </td>
+    </tr>`;
+  }).join('');
+}
+window.setTab=function(t,el){tab=t;document.querySelectorAll('.pill').forEach(b=>b.classList.remove('on'));el.classList.add('on');render();};
+window.upd=async function(id,status){await updateDoc2('orders',id,{status});toast('Updated ✓','ok');};
+</script></body></html>

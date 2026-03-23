@@ -1,0 +1,68 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"/><title>PetWell · Pet Profiles</title><link rel="stylesheet" href="style.css"/></head>
+<body><div class="admin-wrap"><aside class="admin-sidebar"></aside><div class="admin-main">
+  <div class="admin-topbar">
+    <div style="display:flex;align-items:center;gap:10px">
+      <a href="admindash.html" class="back-btn" style="background:var(--sky2);color:var(--teal)">‹</a>
+      <h1>Pet Profiles</h1>
+    </div>
+    <button class="btn btn-teal btn-sm" style="width:auto" onclick="openModal('addM')">+ Add Pet</button>
+  </div>
+  <div class="admin-content">
+    <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap">
+      <input class="input" id="q" placeholder="🔍 Search by name or owner…" oninput="filter()" style="max-width:260px"/>
+      <select class="input" id="spF" onchange="filter()" style="max-width:160px"><option value="">All Species</option><option>Dog</option><option>Cat</option><option>Bird</option><option>Rabbit</option><option>Other</option></select>
+    </div>
+    <div class="tbl-wrap fade-up">
+      <table><thead><tr><th>Pet</th><th>Species/Breed</th><th>Age</th><th>Owner</th><th>Notes</th><th>Action</th></tr></thead>
+      <tbody id="tbody"><tr><td colspan="6" style="text-align:center;padding:40px"><div class="spin"></div></td></tr></tbody></table>
+    </div>
+  </div>
+</div></div>
+
+<div class="overlay hidden" id="addM"><div class="modal"><div class="modal-handle"></div>
+  <div class="modal-head"><h2>Add New Pet</h2><button class="modal-close" onclick="closeModal('addM')">✕</button></div>
+  <div class="modal-body">
+    <div class="form-group"><label>Pet Name *</label><input class="input" id="aN" placeholder="Bruno"/></div>
+    <div class="frow2">
+      <div class="form-group"><label>Species *</label><select class="input" id="aS"><option value="">Select…</option><option>Dog</option><option>Cat</option><option>Bird</option><option>Rabbit</option><option>Other</option></select></div>
+      <div class="form-group"><label>Age</label><input class="input" id="aA" type="number" placeholder="3"/></div>
+    </div>
+    <div class="form-group"><label>Breed</label><input class="input" id="aB" placeholder="Labrador"/></div>
+    <div class="form-group"><label>Owner Name *</label><input class="input" id="aO" placeholder="Kamal Perera"/></div>
+    <div class="form-group"><label>Health Notes</label><textarea class="input" id="aNt" rows="2" placeholder="Vaccinated, no allergies…"></textarea></div>
+  </div>
+  <div class="modal-foot"><button class="btn btn-teal" onclick="addPet()">Save Pet</button><button class="btn btn-outline" onclick="closeModal('addM')">Cancel</button></div>
+</div></div>
+
+<script>window.ACTIVE='adminpets.html';</script><script src="adminnav.js"></script><script src="shared.js"></script>
+<script type="module">
+import{onAuth,logoutUser,addDocWithID,watch,deleteDoc2}from'./firebase.js';
+window.doLogout=async()=>{await logoutUser();location.href='adminlogin.html';};
+onAuth(u=>{if(!u){location.href='adminlogin.html';return;}});
+const EMO={Dog:'🐕',Cat:'🐈',Bird:'🦜',Rabbit:'🐇',Other:'🐾'};
+let all=[];
+watch('pets',snap=>{all=[];snap.forEach(d=>all.push({id:d.id,...d.data()}));filter();});
+window.filter=function(){
+  const q=document.getElementById('q').value.toLowerCase();
+  const sp=document.getElementById('spF').value;
+  const list=all.filter(p=>(!q||p.name?.toLowerCase().includes(q)||p.ownerName?.toLowerCase().includes(q))&&(!sp||p.species===sp));
+  const tb=document.getElementById('tbody');
+  if(!list.length){tb.innerHTML='<tr><td colspan="6" style="text-align:center;padding:36px;color:var(--text-mute)">No pets found</td></tr>';return;}
+  tb.innerHTML=list.map(p=>`<tr>
+    <td><div style="display:flex;align-items:center;gap:8px"><span style="font-size:1.2rem">${EMO[p.species]||'🐾'}</span><strong>${p.name}</strong></div></td>
+    <td><div>${p.species||'—'}</div><div class="text-mute" style="font-size:.74rem">${p.breed||''}</div></td>
+    <td>${p.age||'—'}</td>
+    <td>${p.ownerName||'—'}</td>
+    <td class="text-mute" style="font-size:.78rem;max-width:140px">${p.notes||'—'}</td>
+    <td><button class="btn btn-danger btn-sm" onclick="delPet('${p.id}','${p.name}')">Delete</button></td>
+  </tr>`).join('');
+};
+window.addPet=async function(){
+  const n=document.getElementById('aN').value.trim(),s=document.getElementById('aS').value,o=document.getElementById('aO').value.trim();
+  if(!n||!s||!o){toast('Name, species & owner required','err');return;}
+  await addDocWithID('pets',{name:n,species:s,breed:document.getElementById('aB').value.trim(),age:document.getElementById('aA').value,ownerName:o,notes:document.getElementById('aNt').value.trim()});
+  closeModal('addM');toast('Pet added!','ok');
+  ['aN','aS','aA','aB','aO','aNt'].forEach(i=>document.getElementById(i).value='');
+};
+window.delPet=function(id,name){confirm2('Delete '+name+'?',async()=>{await deleteDoc2('pets',id);toast('Deleted','inf');});};
+</script></body></html>

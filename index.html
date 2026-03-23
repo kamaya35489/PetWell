@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"/>
+  <title>PetWell · Admin</title>
+  <link rel="stylesheet" href="style.css"/>
+  <style>
+    body { display:flex; align-items:center; justify-content:center; min-height:100vh; background:var(--sky); }
+    .wrap { width:100%; max-width:420px; padding:36px 20px; text-align:center; }
+    .logo-big { font-size:4.5rem; display:block; margin-bottom:14px; animation:float 3s ease-in-out infinite; }
+    @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-12px)} }
+    .brand { font-size:2.2rem; font-weight:800; color:var(--teal); margin-bottom:6px; }
+    .tagline { font-size:.92rem; color:var(--text-mute); line-height:1.7; margin-bottom:36px; }
+    .enter-btn {
+      display:flex; align-items:center; justify-content:center; gap:12px;
+      padding:18px 24px; background:var(--teal); color:#fff;
+      border-radius:var(--radius); font-size:1rem; font-weight:700;
+      text-decoration:none; box-shadow:0 4px 18px rgba(26,79,114,.35);
+      transition:all .2s;
+    }
+    .enter-btn:hover { background:var(--teal-lt); transform:translateY(-2px); box-shadow:0 8px 28px rgba(26,79,114,.4); }
+    .version { margin-top:20px; font-size:.74rem; color:var(--text-mute); }
+  </style>
+</head>
+<body>
+  <div class="wrap fade-up">
+    <span class="logo-big">🐾</span>
+    <div class="brand">PetWell</div>
+    <p class="tagline">Pet Care Management System<br>Admin Control Panel</p>
+    <a class="enter-btn" href="adminlogin.html">
+      🛠 &nbsp; Enter Admin Panel &nbsp; →
+    </a>
+    <div class="version">PetWell Admin v3.0</div>
+  </div>
+</body>
+</html>
