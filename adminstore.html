@@ -1,0 +1,101 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"/><title>PetWell · Store</title><link rel="stylesheet" href="style.css"/></head>
+<body><div class="admin-wrap"><aside class="admin-sidebar"></aside><div class="admin-main">
+  <div class="admin-topbar">
+    <div style="display:flex;align-items:center;gap:10px">
+      <a href="admindash.html" class="back-btn" style="background:var(--sky2);color:var(--teal)">‹</a>
+      <h1>Store</h1>
+    </div>
+    <button class="btn btn-teal btn-sm" style="width:auto" onclick="openModal('addM')">+ Add Product</button>
+  </div>
+  <div class="admin-content">
+    <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap">
+      <input class="input" id="q" placeholder="🔍 Search products…" oninput="filter()" style="max-width:260px"/>
+      <select class="input" id="catF" onchange="filter()" style="max-width:160px"><option value="">All Categories</option><option>Food</option><option>Toys</option><option>Accessories</option><option>Medicine</option><option>Grooming</option></select>
+    </div>
+    <div class="tbl-wrap fade-up">
+      <table><thead><tr><th>Product</th><th>Category</th><th>Price</th><th>Stock</th><th>Actions</th></tr></thead>
+      <tbody id="tbody"><tr><td colspan="5" style="text-align:center;padding:40px"><div class="spin"></div></td></tr></tbody></table>
+    </div>
+  </div>
+</div></div>
+
+<div class="overlay hidden" id="addM"><div class="modal"><div class="modal-handle"></div>
+  <div class="modal-head"><h2>Add Product</h2><button class="modal-close" onclick="closeModal('addM')">✕</button></div>
+  <div class="modal-body">
+    <div class="form-group"><label>Product Name *</label><input class="input" id="aN" placeholder="Premium Dog Food"/></div>
+    <div class="frow2">
+      <div class="form-group"><label>Category</label><select class="input" id="aC"><option>Food</option><option>Toys</option><option>Accessories</option><option>Medicine</option><option>Grooming</option></select></div>
+      <div class="form-group"><label>Price (Rs.) *</label><input class="input" id="aP" type="number" placeholder="1500"/></div>
+    </div>
+    <div class="frow2">
+      <div class="form-group"><label>Emoji Icon</label><input class="input" id="aE" placeholder="🦴" maxlength="4"/></div>
+      <div class="form-group"><label>Stock Qty</label><input class="input" id="aSt" type="number" placeholder="50"/></div>
+    </div>
+    <div class="form-group"><label>Description</label><textarea class="input" id="aD" rows="2" placeholder="Short description…"></textarea></div>
+  </div>
+  <div class="modal-foot"><button class="btn btn-teal" onclick="addProd()">Save Product</button><button class="btn btn-outline" onclick="closeModal('addM')">Cancel</button></div>
+</div></div>
+
+<div class="overlay hidden" id="editM"><div class="modal"><div class="modal-handle"></div>
+  <div class="modal-head"><h2>Edit Product</h2><button class="modal-close" onclick="closeModal('editM')">✕</button></div>
+  <div class="modal-body">
+    <input type="hidden" id="eId"/>
+    <div class="form-group"><label>Product Name</label><input class="input" id="eN"/></div>
+    <div class="frow2">
+      <div class="form-group"><label>Category</label><select class="input" id="eC"><option>Food</option><option>Toys</option><option>Accessories</option><option>Medicine</option><option>Grooming</option></select></div>
+      <div class="form-group"><label>Price (Rs.)</label><input class="input" id="eP" type="number"/></div>
+    </div>
+    <div class="frow2">
+      <div class="form-group"><label>Emoji</label><input class="input" id="eE" maxlength="4"/></div>
+      <div class="form-group"><label>Stock</label><input class="input" id="eSt" type="number"/></div>
+    </div>
+    <div class="form-group"><label>Description</label><textarea class="input" id="eD" rows="2"></textarea></div>
+  </div>
+  <div class="modal-foot"><button class="btn btn-teal" onclick="saveProd()">Update</button><button class="btn btn-outline" onclick="closeModal('editM')">Cancel</button></div>
+</div></div>
+
+<script>window.ACTIVE='adminstore.html';</script><script src="adminnav.js"></script><script src="shared.js"></script>
+<script type="module">
+import{onAuth,logoutUser,addDoc2,addDocWithID,watch,updateDoc2,deleteDoc2}from'./firebase.js';
+window.doLogout=async()=>{await logoutUser();location.href='adminlogin.html';};
+onAuth(u=>{if(!u){location.href='adminlogin.html';return;}});
+let all=[];
+watch('products',snap=>{all=[];snap.forEach(d=>all.push({id:d.id,...d.data()}));filter();});
+window.filter=function(){
+  const q=document.getElementById('q').value.toLowerCase();
+  const cat=document.getElementById('catF').value;
+  const list=all.filter(p=>(!q||p.name?.toLowerCase().includes(q))&&(!cat||p.category===cat));
+  const tb=document.getElementById('tbody');
+  if(!list.length){tb.innerHTML='<tr><td colspan="5" style="text-align:center;padding:36px;color:var(--text-mute)">No products found</td></tr>';return;}
+  tb.innerHTML=list.map(p=>`<tr>
+    <td><div style="display:flex;align-items:center;gap:10px"><span style="font-size:1.4rem">${p.emoji||'📦'}</span><div><div style="font-weight:700">${p.name}</div><div class="text-mute" style="font-size:.74rem">${p.description||''}</div></div></div></td>
+    <td><span class="badge badge-teal">${p.category||'—'}</span></td>
+    <td style="font-weight:800;color:var(--teal)">Rs.${Number(p.price||0).toLocaleString()}</td>
+    <td><span class="badge ${p.stock>0?'badge-green':'badge-red'}">${p.stock||0}</span></td>
+    <td>
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-sm btn-outline" style="width:auto" onclick='editProd(${JSON.stringify(p)})'>Edit</button>
+        <button class="btn btn-danger btn-sm" onclick="delProd('${p.id}')">Del</button>
+      </div>
+    </td>
+  </tr>`).join('');
+};
+window.addProd=async function(){
+  const n=document.getElementById('aN').value.trim(),p=document.getElementById('aP').value;
+  if(!n||!p){toast('Name & price required','err');return;}
+  await addDocWithID('products',{name:n,price:Number(p),category:document.getElementById('aC').value,emoji:document.getElementById('aE').value||'📦',stock:Number(document.getElementById('aSt').value||0),description:document.getElementById('aD').value.trim()});
+  closeModal('addM');toast('Product added!','ok');['aN','aP','aE','aSt','aD'].forEach(i=>document.getElementById(i).value='');
+};
+window.editProd=function(p){
+  document.getElementById('eId').value=p.id;document.getElementById('eN').value=p.name;
+  document.getElementById('eC').value=p.category;document.getElementById('eP').value=p.price;
+  document.getElementById('eE').value=p.emoji||'';document.getElementById('eSt').value=p.stock||0;
+  document.getElementById('eD').value=p.description||'';openModal('editM');
+};
+window.saveProd=async function(){
+  const id=document.getElementById('eId').value;
+  await updateDoc2('products',id,{name:document.getElementById('eN').value.trim(),category:document.getElementById('eC').value,price:Number(document.getElementById('eP').value),emoji:document.getElementById('eE').value,stock:Number(document.getElementById('eSt').value),description:document.getElementById('eD').value.trim()});
+  closeModal('editM');toast('Updated!','ok');
+};
+window.delProd=function(id){confirm2('Delete this product?',async()=>{await deleteDoc2('products',id);toast('Deleted','inf');});};
+</script></body></html>

@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Camera Sender</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #0f0f0f;
+      color: #fff;
+      font-family: sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      text-align: center;
+    }
+
+    h1 { font-size: 24px; margin-bottom: 6px; }
+    .sub { font-size: 14px; color: #888; margin-bottom: 24px; }
+
+    video {
+      width: 100%;
+      max-width: 360px;
+      aspect-ratio: 16/9;
+      background: #1a1a1a;
+      border-radius: 12px;
+      border: 2px solid #333;
+      margin-bottom: 24px;
+      display: block;
+    }
+
+    #startBtn {
+      background: #22c55e;
+      color: #fff;
+      border: none;
+      padding: 14px 40px;
+      font-size: 17px;
+      font-weight: bold;
+      border-radius: 50px;
+      cursor: pointer;
+      width: 100%;
+      max-width: 300px;
+    }
+    #startBtn:active { background: #16a34a; }
+
+    #stopBtn {
+      background: #ef4444;
+      color: #fff;
+      border: none;
+      padding: 14px 40px;
+      font-size: 17px;
+      font-weight: bold;
+      border-radius: 50px;
+      cursor: pointer;
+      width: 100%;
+      max-width: 300px;
+      display: none;
+      margin-top: 12px;
+    }
+    #stopBtn:active { background: #dc2626; }
+
+    #status {
+      margin-top: 20px;
+      padding: 12px 20px;
+      border-radius: 10px;
+      font-size: 14px;
+      background: #1a1a1a;
+      color: #888;
+      max-width: 320px;
+      width: 100%;
+    }
+    #status.live  { background: #052e16; color: #22c55e; }
+    #status.error { background: #2d0a0a; color: #ef4444; }
+  </style>
+</head>
+<body>
+
+  <h1>📷 Camera Sender</h1>
+  <p class="sub">Open this on your phone and tap Start</p>
+
+  <video id="myVideo" autoplay muted playsinline></video>
+
+  <button id="startBtn" onclick="startStream()">▶ Start Streaming</button>
+  <button id="stopBtn"  onclick="stopStream()">⏹ Stop Streaming</button>
+
+  <div id="status">Ready — tap Start to begin</div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    let stream, pc, socket;
+
+    const ICE = {
+      iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' }
+      ]
+    };
+
+    function log(msg, type = '') {
+      const el = document.getElementById('status');
+      el.textContent = msg;
+      el.className = type;
+    }
+
+    async function startStream() {
+      try {
+        log('Accessing camera...');
+
+        // Get rear camera
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: 'environment' } },
+          audio: false
+        });
+
+        document.getElementById('myVideo').srcObject = stream;
+        document.getElementById('startBtn').style.display = 'none';
+        document.getElementById('stopBtn').style.display  = 'block';
+        log('Camera on. Connecting to server...');
+
+        socket = io();
+
+        socket.on('connect', async () => {
+          log('Connected! Starting stream...');
+
+          pc = new RTCPeerConnection(ICE);
+
+          // Add camera to connection
+          stream.getTracks().forEach(track => pc.addTrack(track, stream));
+
+          // Send ICE candidates
+          pc.onicecandidate = e => {
+            if (e.candidate) socket.emit('ice-candidate', e.candidate);
+          };
+
+          // Create and send offer to viewer
+          const offer = await pc.createOffer();
+          await pc.setLocalDescription(offer);
+          socket.emit('offer', offer);
+
+          log('🟢 Live! Viewer can now see your camera.', 'live');
+        });
+
+        // Receive answer from viewer
+        socket.on('answer', async (answer) => {
+          await pc.setRemoteDescription(new RTCSessionDescription(answer));
+        });
+
+        socket.on('ice-candidate', async (c) => {
+          try { await pc.addIceCandidate(new RTCIceCandidate(c)); } catch(e) {}
+        });
+
+        socket.on('disconnect', () => log('Lost connection to server.', 'error'));
+
+      } catch (err) {
+        log('Error: ' + err.message, 'error');
+      }
+    }
+
+    function stopStream() {
+      if (stream) stream.getTracks().forEach(t => t.stop());
+      if (pc) pc.close();
+      if (socket) socket.disconnect();
+      document.getElementById('myVideo').srcObject = null;
+      document.getElementById('startBtn').style.display = 'block';
+      document.getElementById('stopBtn').style.display  = 'none';
+      log('Stopped.');
+    }
+  </script>
+</body>
+</html>
