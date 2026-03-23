@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"/>
+  <title>PetWell · CCTV</title>
+  <link rel="stylesheet" href="style.css"/>
+  <style>
+    .cam {
+      background: var(--white);
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: var(--shadow);
+      max-width: 820px;
+    }
+    .cam-bar {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .cam-info { display: flex; align-items: center; gap: 12px; }
+    .cam-icon {
+      width: 44px; height: 44px; border-radius: var(--radius-sm);
+      background: var(--sky2); display: flex;
+      align-items: center; justify-content: center; font-size: 1.3rem;
+    }
+    .cam-name { font-size: 1rem; font-weight: 700; color: var(--text); }
+    .cam-sub  { font-size: .72rem; color: var(--text-mute); margin-top: 2px; }
+    .cam-live {
+      display: flex; align-items: center; gap: 6px;
+      font-size: .78rem; font-weight: 700; color: var(--text-mute);
+    }
+    .ldot { width: 8px; height: 8px; border-radius: 50%; background: var(--text-mute); }
+    .ldot.on {
+      background: var(--red); animation: blink 1s infinite;
+      box-shadow: 0 0 0 3px rgba(231,76,60,.2);
+    }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+    .cam-screen {
+      height: 420px; background: #0f1e2d;
+      display: flex; align-items: center; justify-content: center;
+      flex-direction: column; color: rgba(255,255,255,.35);
+      position: relative; overflow: hidden;
+    }
+    .cam-screen::before {
+      content: ''; position: absolute; inset: 0;
+      background-image:
+        linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px);
+      background-size: 44px 44px; pointer-events: none;
+    }
+    .sc-icon  { font-size: 3.2rem; margin-bottom: 14px; position: relative; }
+    .sc-title { font-size: .92rem; font-weight: 700; position: relative; color: rgba(255,255,255,.45); }
+    .sc-hint  { font-size: .78rem; margin-top: 8px; position: relative; color: rgba(255,255,255,.22); }
+
+    .cam-stats {
+      display: flex; border-top: 1px solid var(--border);
+    }
+    .stat-item {
+      flex: 1; padding: 12px 18px; border-right: 1px solid var(--border); text-align: center;
+    }
+    .stat-item:last-child { border-right: none; }
+    .stat-lbl { font-size: .68rem; font-weight: 700; color: var(--text-mute); text-transform: uppercase; letter-spacing: .06em; }
+    .stat-val { font-size: 1rem; font-weight: 700; color: var(--text); margin-top: 4px; font-family: monospace; }
+    .stat-val.live { color: var(--red); }
+    .stat-val.teal { color: var(--teal); }
+
+    .cam-foot {
+      padding: 14px 20px; display: flex; gap: 10px;
+      border-top: 1px solid var(--border); align-items: center;
+    }
+
+    .notice {
+      background: #fff8e1; border: 1.5px solid #f59e0b;
+      border-radius: var(--radius-sm); padding: 14px 16px;
+      margin-bottom: 20px; font-size: .84rem; color: #92400e; line-height: 1.6;
+    }
+    .notice.hidden { display: none; }
+    .notice code { background: rgba(0,0,0,.08); padding: 2px 8px; border-radius: 4px; font-family: monospace; }
+
+    .fade-up { animation: fadeUp .35s ease both; }
+    @keyframes fadeUp { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
+  </style>
+</head>
+<body>
+<div class="admin-wrap">
+  <aside class="admin-sidebar"></aside>
+  <div class="admin-main">
+
+    <div class="admin-topbar">
+      <div style="display:flex;align-items:center;gap:10px">
+        <a href="admindash.html" class="back-btn" style="background:var(--sky2);color:var(--teal)">‹</a>
+        <h1>CCTV Monitor</h1>
+      </div>
+      <span class="badge badge-teal" id="liveTag">● 0 Live</span>
+    </div>
+
+    <div class="admin-content">
+
+      <div id="srvNotice" class="notice hidden">
+        ⚠️ <strong>CCTV requires the Node.js server.</strong> Open a terminal and run:
+        <code>npm install &amp;&amp; node server.js</code>
+        — then open <strong>http://localhost:3000</strong> in your browser.
+      </div>
+
+      <div class="fade-up">
+        <div class="cam">
+
+          <div class="cam-bar">
+            <div class="cam-info">
+              <div class="cam-icon">📹</div>
+              <div>
+                <div class="cam-name">Main Arena</div>
+                <div class="cam-sub">Live camera feed · Outdoor Yard</div>
+              </div>
+            </div>
+            <span class="cam-live">
+              <span class="ldot" id="d1"></span>
+              <span id="s1">Offline</span>
+            </span>
+          </div>
+
+          <div id="f1" style="position:relative;">
+            <div class="cam-screen">
+              <div class="sc-icon">📵</div>
+              <div class="sc-title">No Feed</div>
+              <div class="sc-hint">Start streaming from your phone to see live footage</div>
+            </div>
+          </div>
+
+          <div class="cam-stats">
+            <div class="stat-item">
+              <div class="stat-lbl">Status</div>
+              <div class="stat-val" id="statStatus">Offline</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-lbl">Quality</div>
+              <div class="stat-val teal" id="statQuality">—</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-lbl">Snapshots</div>
+              <div class="stat-val" id="statSnaps">0</div>
+            </div>
+          </div>
+
+          <div class="cam-foot">
+            <button class="btn btn-sm btn-outline" style="width:auto" onclick="goFull()">⛶ Fullscreen</button>
+            <button class="btn btn-sm btn-outline" style="width:auto" onclick="snap()">📸 Snapshot</button>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/socket.io/socket.io.js" onerror="window._noSock=true"></script>
+<script>window.ACTIVE='admincctv.html';</script>
+<script src="adminnav.js"></script>
+<script src="shared.js"></script>
+<script type="module">
+  import { onAuth, logoutUser } from './firebase.js';
+  window.doLogout = async () => { await logoutUser(); location.href = 'index.html'; };
+  onAuth(u => { if (!u) { location.href = 'adminlogin.html'; return; } });
+</script>
+<script>
+  var pc = null;
+  var snapCount = 0;
+  var ICE = {
+    iceServers: [
+      { urls: 'stun:stun.l.google.com:19302' },
+      { urls: 'stun:stun1.l.google.com:19302' },
+      { urls: 'stun:stun2.l.google.com:19302' }
+    ]
+  };
+
+  window.addEventListener('load', function () {
+    if (window._noSock || typeof io === 'undefined') {
+      document.getElementById('srvNotice').classList.remove('hidden');
+      return;
+    }
+
+    var s = io({ transports: ['websocket', 'polling'] });
+
+    s.on('connect', function () { console.log('✅ Admin CCTV connected:', s.id); });
+
+    s.on('connect_error', function (err) {
+      console.error('Socket error:', err.message);
+      document.getElementById('srvNotice').classList.remove('hidden');
+    });
+
+    s.on('offer', async function (offer) {
+      try {
+        pc = new RTCPeerConnection(ICE);
+
+        var wrapper = document.createElement('div');
+        wrapper.style.position = 'relative';
+
+        var v = document.createElement('video');
+        v.id = 'cam1v'; v.autoplay = true; v.playsInline = true; v.muted = true;
+        v.style.cssText = 'width:100%;height:420px;object-fit:cover;background:#000;display:block;';
+
+        var overlay = document.createElement('div');
+        overlay.style.cssText = 'position:absolute;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;flex-direction:column;color:#fff;cursor:pointer;gap:10px;';
+        overlay.innerHTML = '<span style="font-size:3rem">▶</span><p style="font-size:.9rem;font-weight:600">Click to play</p>';
+        overlay.onclick = function () { v.play().then(function(){ overlay.style.display='none'; }).catch(function(){}); };
+
+        pc.ontrack = function (e) {
+          v.srcObject = e.streams[0];
+          v.play().then(function () {
+            overlay.style.display = 'none';
+          }).catch(function () {
+            overlay.style.display = 'flex';
+          });
+          v.onloadedmetadata = function () {
+            var q = v.videoWidth >= 1280 ? 'HD 720p+' : v.videoWidth >= 640 ? 'SD 480p' : 'Low';
+            document.getElementById('statQuality').textContent = q;
+          };
+        };
+
+        pc.onicecandidate = function (e) {
+          if (e.candidate) s.emit('ice-candidate', e.candidate);
+        };
+
+        await pc.setRemoteDescription(new RTCSessionDescription(offer));
+        var ans = await pc.createAnswer();
+        await pc.setLocalDescription(ans);
+        s.emit('answer', ans);
+
+        wrapper.appendChild(v);
+        wrapper.appendChild(overlay);
+        document.getElementById('f1').innerHTML = '';
+        document.getElementById('f1').appendChild(wrapper);
+
+        document.getElementById('d1').classList.add('on');
+        document.getElementById('s1').textContent = 'LIVE';
+        document.getElementById('liveTag').textContent = '● 1 Live';
+        document.getElementById('statStatus').textContent = 'Live';
+        document.getElementById('statStatus').classList.add('live');
+
+        if (typeof toast === 'function') toast('📹 Camera connected!', 'ok');
+
+      } catch (e) { console.error('WebRTC error:', e); }
+    });
+
+    s.on('ice-candidate', async function (c) {
+      if (pc) { try { await pc.addIceCandidate(new RTCIceCandidate(c)); } catch (e) {} }
+    });
+
+    s.on('stream-ended', function () {
+      document.getElementById('f1').innerHTML = `
+        <div class="cam-screen">
+          <div class="sc-icon">📵</div>
+          <div class="sc-title">Stream Ended</div>
+          <div class="sc-hint">Reconnect from your phone to resume</div>
+        </div>`;
+      document.getElementById('d1').classList.remove('on');
+      document.getElementById('s1').textContent = 'Offline';
+      document.getElementById('liveTag').textContent = '● 0 Live';
+      document.getElementById('statStatus').textContent = 'Offline';
+      document.getElementById('statStatus').classList.remove('live');
+      document.getElementById('statQuality').textContent = '—';
+      if (pc) { pc.close(); pc = null; }
+    });
+  });
+
+  function goFull() {
+    var v = document.getElementById('cam1v');
+    if (v && v.requestFullscreen) v.requestFullscreen();
+    else if (typeof toast === 'function') toast('No live feed to fullscreen', 'err');
+  }
+
+  function snap() {
+    var v = document.getElementById('cam1v');
+    if (!v) { if (typeof toast === 'function') toast('No live feed', 'err'); return; }
+    var c = document.createElement('canvas');
+    c.width = v.videoWidth; c.height = v.videoHeight;
+    c.getContext('2d').drawImage(v, 0, 0);
+    var a = document.createElement('a');
+    a.download = 'arena-' + Date.now() + '.png';
+    a.href = c.toDataURL(); a.click();
+    snapCount++;
+    document.getElementById('statSnaps').textContent = snapCount;
+    if (typeof toast === 'function') toast('📸 Snapshot saved!', 'ok');
+  }
+</script>
+</body>
+</html>

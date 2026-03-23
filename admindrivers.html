@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"/>
+  <title>PetWell · Drivers</title>
+  <link rel="stylesheet" href="style.css"/>
+  <style>
+    /* ── Driver card ── */
+    .driver-card {
+      background: var(--white);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 18px 20px;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      border-left: 4px solid var(--teal);
+      transition: box-shadow .18s;
+    }
+    .driver-card:hover { box-shadow: var(--shadow-md); }
+
+    .driver-avatar {
+      width: 50px; height: 50px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--teal), var(--teal-lt));
+      color: #fff; font-size: 1.3rem; font-weight: 800;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .driver-info { flex: 1; min-width: 0; }
+    .driver-name { font-weight: 700; font-size: .95rem; margin-bottom: 4px; }
+    .driver-meta {
+      display: flex; flex-wrap: wrap; gap: 10px;
+      font-size: .76rem; color: var(--text-mute);
+    }
+    .driver-meta span { display: flex; align-items: center; gap: 3px; }
+    .driver-actions { display: flex; gap: 8px; flex-shrink: 0; flex-wrap: wrap; align-items: center; }
+
+    /* Status pill */
+    .status-pill {
+      padding: 4px 12px; border-radius: 999px;
+      font-size: .73rem; font-weight: 700; border: none;
+      cursor: pointer; transition: all .15s;
+    }
+    .status-pill.Active    { background: #d5f0e2; color: var(--green); }
+    .status-pill.Inactive  { background: #fde8e6; color: var(--red); }
+    .status-pill.On-Delivery { background: #fff8e1; color: #c87a00; }
+
+    /* Mini stats */
+    .mini-stats { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; margin-bottom: 20px; }
+    .ms-card { background: var(--white); border-radius: var(--radius-sm); padding: 14px 12px; text-align: center; box-shadow: var(--shadow); }
+    .ms-num { font-size: 1.6rem; font-weight: 800; color: var(--teal); }
+    .ms-lbl { font-size: .67rem; font-weight: 700; color: var(--text-mute); text-transform: uppercase; letter-spacing: .05em; margin-top: 2px; }
+
+    /* Assign panel */
+    .assign-panel { background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow); padding: 18px 20px; margin-top: 20px; }
+    .assign-panel h2 { font-size: .95rem; font-weight: 700; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+  </style>
+</head>
+<body>
+
+<div class="admin-wrap">
+  <aside class="admin-sidebar"></aside>
+  <div class="admin-main">
+
+    <!-- TOP BAR -->
+    <div class="admin-topbar">
+      <div style="display:flex;align-items:center;gap:10px">
+        <a href="admindash.html" class="back-btn" style="background:var(--sky2);color:var(--teal)">‹</a>
+        <h1>Delivery Drivers</h1>
+      </div>
+      <button class="btn btn-teal btn-sm" style="width:auto" onclick="openModal('addModal')">
+        + Add Driver
+      </button>
+    </div>
+
+    <div class="admin-content">
+
+      <!-- MINI STATS -->
+      <div class="mini-stats fade-up">
+        <div class="ms-card">
+          <div class="ms-num" id="statTotal">—</div>
+          <div class="ms-lbl">Total Drivers</div>
+        </div>
+        <div class="ms-card">
+          <div class="ms-num" id="statActive" style="color:var(--green)">—</div>
+          <div class="ms-lbl">Active</div>
+        </div>
+        <div class="ms-card">
+          <div class="ms-num" id="statBusy" style="color:#c87a00">—</div>
+          <div class="ms-lbl">On Delivery</div>
+        </div>
+      </div>
+
+      <!-- SEARCH & FILTER -->
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px" class="fade-up">
+        <input class="input" id="searchQ" placeholder="🔍  Search name or phone…"
+          oninput="renderDrivers()" style="max-width:260px"/>
+        <select class="input" id="filterStatus" onchange="renderDrivers()" style="max-width:160px">
+          <option value="">All Statuses</option>
+          <option>Active</option>
+          <option>Inactive</option>
+          <option>On Delivery</option>
+        </select>
+        <span class="badge badge-teal" id="driverCount" style="align-self:center;font-size:.82rem">— drivers</span>
+      </div>
+
+      <!-- DRIVER LIST -->
+      <div id="driverList" class="fade-up">
+        <div class="spin"></div>
+      </div>
+
+      <!-- ASSIGN DRIVER TO ORDER -->
+      <div class="assign-panel fade-up">
+        <h2>🚚 Assign Driver to an Order</h2>
+        <div class="frow2" style="gap:12px">
+          <div class="form-group" style="margin-bottom:0">
+            <label>Select Order</label>
+            <select class="input" id="assignOrderSel">
+              <option value="">Loading orders…</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label>Select Driver</label>
+            <select class="input" id="assignDriverSel">
+              <option value="">Loading drivers…</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn btn-teal" style="margin-top:12px;max-width:240px" onclick="assignDriver()">
+          Assign Driver →
+        </button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════
+     ADD DRIVER MODAL
+═══════════════════════════════════ -->
+<div class="overlay hidden" id="addModal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-head">
+      <h2>Add New Driver</h2>
+      <button class="modal-close" onclick="closeModal('addModal')">✕</button>
+    </div>
+    <div class="modal-body">
+
+      <div class="frow2">
+        <div class="form-group">
+          <label>Full Name *</label>
+          <input class="input" id="aName" placeholder="Sunil Perera"/>
+        </div>
+        <div class="form-group">
+          <label>Phone Number *</label>
+          <input class="input" id="aPhone" placeholder="+94 77 xxx xxxx" type="tel"/>
+        </div>
+      </div>
+
+      <div class="frow2">
+        <div class="form-group">
+          <label>NIC Number *</label>
+          <input class="input" id="aNIC" placeholder="200012345678"/>
+        </div>
+        <div class="form-group">
+          <label>License Number *</label>
+          <input class="input" id="aLicense" placeholder="B1234567"/>
+        </div>
+      </div>
+
+      <div class="frow2">
+        <div class="form-group">
+          <label>Vehicle Type</label>
+          <select class="input" id="aVehicleType">
+            <option>Motorcycle</option>
+            <option>Three-Wheeler</option>
+            <option>Car</option>
+            <option>Van</option>
+            <option>Truck</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Vehicle Number</label>
+          <input class="input" id="aVehicleNo" placeholder="WP CAB-1234"/>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Email Address</label>
+        <input class="input" id="aEmail" type="email" placeholder="driver@example.com"/>
+      </div>
+
+      <div class="form-group">
+        <label>Home Address</label>
+        <input class="input" id="aAddress" placeholder="No.12, Main St, Colombo"/>
+      </div>
+
+      <div class="form-group">
+        <label>Notes / Remarks</label>
+        <textarea class="input" id="aNotes" rows="2"
+          placeholder="Any additional info about the driver…"></textarea>
+      </div>
+
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-teal" onclick="addDriver()">Save Driver</button>
+      <button class="btn btn-outline" onclick="closeModal('addModal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════
+     EDIT DRIVER MODAL
+═══════════════════════════════════ -->
+<div class="overlay hidden" id="editModal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-head">
+      <h2>Edit Driver</h2>
+      <button class="modal-close" onclick="closeModal('editModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="eId"/>
+
+      <div class="frow2">
+        <div class="form-group">
+          <label>Full Name</label>
+          <input class="input" id="eName"/>
+        </div>
+        <div class="form-group">
+          <label>Phone Number</label>
+          <input class="input" id="ePhone"/>
+        </div>
+      </div>
+
+      <div class="frow2">
+        <div class="form-group">
+          <label>NIC Number</label>
+          <input class="input" id="eNIC"/>
+        </div>
+        <div class="form-group">
+          <label>License Number</label>
+          <input class="input" id="eLicense"/>
+        </div>
+      </div>
+
+      <div class="frow2">
+        <div class="form-group">
+          <label>Vehicle Type</label>
+          <select class="input" id="eVehicleType">
+            <option>Motorcycle</option>
+            <option>Three-Wheeler</option>
+            <option>Car</option>
+            <option>Van</option>
+            <option>Truck</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Vehicle Number</label>
+          <input class="input" id="eVehicleNo"/>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Email Address</label>
+        <input class="input" id="eEmail" type="email"/>
+      </div>
+
+      <div class="form-group">
+        <label>Home Address</label>
+        <input class="input" id="eAddress"/>
+      </div>
+
+      <div class="form-group">
+        <label>Status</label>
+        <select class="input" id="eStatus">
+          <option>Active</option>
+          <option>Inactive</option>
+          <option>On Delivery</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Notes</label>
+        <textarea class="input" id="eNotes" rows="2"></textarea>
+      </div>
+
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-teal" onclick="saveEdit()">Update Driver</button>
+      <button class="btn btn-outline" onclick="closeModal('editModal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+
+<script>window.ACTIVE = 'admindrivers.html';</script>
+<script src="adminnav.js"></script>
+<script src="shared.js"></script>
+<script type="module">
+  import {
+    onAuth, logoutUser,
+    addDocWithID, watch, updateDoc2, deleteDoc2
+  } from './firebase.js';
+
+  // ── Auth guard ────────────────────────────────────────────
+  window.doLogout = async () => { await logoutUser(); location.href = 'adminlogin.html'; };
+  onAuth(u => { if (!u) location.href = 'adminlogin.html'; });
+
+  // ── State ─────────────────────────────────────────────────
+  let allDrivers = [];
+  let allOrders  = [];
+
+  const VEHICLE_ICON = {
+    Motorcycle: '🏍', 'Three-Wheeler': '🛺',
+    Car: '🚗', Van: '🚐', Truck: '🚛'
+  };
+
+  // ── Watch drivers from Firestore ──────────────────────────
+  watch('drivers', snap => {
+    allDrivers = [];
+    snap.forEach(d => allDrivers.push({ id: d.id, ...d.data() }));
+    allDrivers.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+
+    // Update stats
+    document.getElementById('statTotal').textContent  = allDrivers.length;
+    document.getElementById('statActive').textContent = allDrivers.filter(d => d.status === 'Active').length;
+    document.getElementById('statBusy').textContent   = allDrivers.filter(d => d.status === 'On Delivery').length;
+
+    // Refresh assign dropdown
+    populateAssignDropdowns();
+
+    renderDrivers();
+  });
+
+  // ── Watch orders from Firestore ───────────────────────────
+  watch('orders', snap => {
+    allOrders = [];
+    snap.forEach(d => {
+      const data = d.data();
+      // Show only undelivered, unassigned orders
+      if (data.status !== 'Delivered' && data.status !== 'Cancelled') {
+        allOrders.push({ id: d.id, ...data });
+      }
+    });
+    allOrders.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+    populateAssignDropdowns();
+  });
+
+  // ── Populate assign dropdowns ─────────────────────────────
+  function populateAssignDropdowns() {
+    const ordSel = document.getElementById('assignOrderSel');
+    const drvSel = document.getElementById('assignDriverSel');
+
+    ordSel.innerHTML = '<option value="">Select an order…</option>' +
+      allOrders.map(o => {
+        const label = o.id + (o.ownerEmail ? ' — ' + o.ownerEmail.split('@')[0] : '');
+        const status = o.driverName ? ` [${o.driverName}]` : '';
+        return `<option value="${o.id}">${label}${status} [${o.status || 'Processing'}]</option>`;
+      }).join('');
+
+    drvSel.innerHTML = '<option value="">Select a driver…</option>' +
+      allDrivers
+        .filter(d => d.status === 'Active' || d.status === 'On Delivery')
+        .map(d => `<option value="${d.id}">${d.name} — ${VEHICLE_ICON[d.vehicleType] || '🚗'} ${d.vehicleNo || ''}</option>`)
+        .join('');
+  }
+
+  // ── Render driver list ────────────────────────────────────
+  window.renderDrivers = function() {
+    const q  = document.getElementById('searchQ').value.toLowerCase();
+    const st = document.getElementById('filterStatus').value;
+
+    const filtered = allDrivers.filter(d =>
+      (!q  || (d.name||'').toLowerCase().includes(q) || (d.phone||'').includes(q)) &&
+      (!st || d.status === st)
+    );
+
+    document.getElementById('driverCount').textContent =
+      filtered.length + ' driver' + (filtered.length !== 1 ? 's' : '');
+
+    const el = document.getElementById('driverList');
+
+    if (!filtered.length) {
+      el.innerHTML = `
+        <div class="empty">
+          <span class="ei">🧑‍✈️</span>
+          <p>No drivers found.<br>Tap <strong>+ Add Driver</strong> to register one.</p>
+        </div>`;
+      return;
+    }
+
+    el.innerHTML = filtered.map(d => {
+      const statusClass = (d.status || 'Active').replace(' ', '-');
+      return `
+        <div class="driver-card">
+          <div class="driver-avatar">${(d.name || '?')[0].toUpperCase()}</div>
+          <div class="driver-info">
+            <div class="driver-name">${d.name || '—'}</div>
+            <div class="driver-meta">
+              <span>📞 ${d.phone || '—'}</span>
+              <span>${VEHICLE_ICON[d.vehicleType] || '🚗'} ${d.vehicleType || '—'} ${d.vehicleNo ? '· ' + d.vehicleNo : ''}</span>
+              <span>🪪 ${d.nic || '—'}</span>
+              <span>📋 ${d.license || '—'}</span>
+              ${d.email ? `<span>✉️ ${d.email}</span>` : ''}
+              ${d.address ? `<span>📍 ${d.address}</span>` : ''}
+            </div>
+            ${d.currentOrder
+              ? `<div style="margin-top:5px;font-size:.76rem;color:#c87a00;font-weight:700">
+                   📦 On delivery: Order #${d.currentOrder}
+                 </div>`
+              : ''}
+            ${d.notes
+              ? `<div style="margin-top:4px;font-size:.75rem;color:var(--text-mute);font-style:italic">${d.notes}</div>`
+              : ''}
+          </div>
+          <div class="driver-actions">
+            <button class="status-pill ${statusClass}"
+              onclick="toggleStatus('${d.id}','${d.status || 'Active'}')">
+              ${d.status || 'Active'}
+            </button>
+            <button class="btn btn-sm btn-outline" style="width:auto"
+              onclick='openEdit(${JSON.stringify(d)})'>✏️ Edit</button>
+            <button class="btn btn-danger btn-sm"
+              onclick="removeDriver('${d.id}','${d.name}')">🗑</button>
+          </div>
+        </div>`;
+    }).join('');
+  };
+
+  // ── Add driver ────────────────────────────────────────────
+  window.addDriver = async function() {
+    const name    = document.getElementById('aName').value.trim();
+    const phone   = document.getElementById('aPhone').value.trim();
+    const nic     = document.getElementById('aNIC').value.trim();
+    const license = document.getElementById('aLicense').value.trim();
+
+    if (!name || !phone || !nic || !license) {
+      toast('Name, phone, NIC & license are required', 'err');
+      return;
+    }
+
+    try {
+      await addDocWithID('drivers', {
+        name,
+        phone,
+        nic,
+        license,
+        vehicleType:  document.getElementById('aVehicleType').value,
+        vehicleNo:    document.getElementById('aVehicleNo').value.trim(),
+        email:        document.getElementById('aEmail').value.trim(),
+        address:      document.getElementById('aAddress').value.trim(),
+        notes:        document.getElementById('aNotes').value.trim(),
+        status:       'Active',
+        currentOrder: null,
+        totalDeliveries: 0
+      });
+
+      closeModal('addModal');
+      toast('Driver added successfully! 🧑‍✈️', 'ok');
+
+      // Clear form
+      ['aName','aPhone','aNIC','aLicense','aVehicleNo','aEmail','aAddress','aNotes']
+        .forEach(id => document.getElementById(id).value = '');
+
+    } catch(err) {
+      toast('Error: ' + err.message, 'err');
+      console.error(err);
+    }
+  };
+
+  // ── Open edit modal ───────────────────────────────────────
+  window.openEdit = function(d) {
+    document.getElementById('eId').value          = d.id;
+    document.getElementById('eName').value        = d.name        || '';
+    document.getElementById('ePhone').value       = d.phone       || '';
+    document.getElementById('eNIC').value         = d.nic         || '';
+    document.getElementById('eLicense').value     = d.license     || '';
+    document.getElementById('eVehicleType').value = d.vehicleType || 'Motorcycle';
+    document.getElementById('eVehicleNo').value   = d.vehicleNo   || '';
+    document.getElementById('eEmail').value       = d.email       || '';
+    document.getElementById('eAddress').value     = d.address     || '';
+    document.getElementById('eStatus').value      = d.status      || 'Active';
+    document.getElementById('eNotes').value       = d.notes       || '';
+    openModal('editModal');
+  };
+
+  // ── Save edit ─────────────────────────────────────────────
+  window.saveEdit = async function() {
+    const id = document.getElementById('eId').value;
+    try {
+      await updateDoc2('drivers', id, {
+        name:        document.getElementById('eName').value.trim(),
+        phone:       document.getElementById('ePhone').value.trim(),
+        nic:         document.getElementById('eNIC').value.trim(),
+        license:     document.getElementById('eLicense').value.trim(),
+        vehicleType: document.getElementById('eVehicleType').value,
+        vehicleNo:   document.getElementById('eVehicleNo').value.trim(),
+        email:       document.getElementById('eEmail').value.trim(),
+        address:     document.getElementById('eAddress').value.trim(),
+        status:      document.getElementById('eStatus').value,
+        notes:       document.getElementById('eNotes').value.trim()
+      });
+      closeModal('editModal');
+      toast('Driver updated! ✓', 'ok');
+    } catch(err) {
+      toast('Error: ' + err.message, 'err');
+    }
+  };
+
+  // ── Toggle status (click pill to switch) ─────────────────
+  window.toggleStatus = async function(id, current) {
+    const next = current === 'Active' ? 'Inactive'
+               : current === 'Inactive' ? 'Active'
+               : 'Active'; // On Delivery → Active
+    try {
+      await updateDoc2('drivers', id, { status: next });
+      toast('Status → ' + next, 'ok');
+    } catch(err) {
+      toast('Error: ' + err.message, 'err');
+    }
+  };
+
+  // ── Delete driver ─────────────────────────────────────────
+  window.removeDriver = function(id, name) {
+    confirm2('Delete driver ' + name + '? This cannot be undone.', async () => {
+      try {
+        await deleteDoc2('drivers', id);
+        toast('Driver removed', 'inf');
+      } catch(err) {
+        toast('Error: ' + err.message, 'err');
+      }
+    });
+  };
+
+  // ── Assign driver to order ────────────────────────────────
+  window.assignDriver = async function() {
+    const orderId  = document.getElementById('assignOrderSel').value;
+    const driverId = document.getElementById('assignDriverSel').value;
+
+    if (!orderId)  { toast('Please select an order', 'err');  return; }
+    if (!driverId) { toast('Please select a driver', 'err'); return; }
+
+    const driver = allDrivers.find(d => d.id === driverId);
+    if (!driver)  { toast('Driver not found', 'err'); return; }
+
+    try {
+      // Update the order with driver details
+      await updateDoc2('orders', orderId, {
+        driverId:      driverId,
+        driverName:    driver.name,
+        driverPhone:   driver.phone,
+        driverVehicle: (driver.vehicleType || '') + ' ' + (driver.vehicleNo || ''),
+        status:        'On the Way'
+      });
+
+      // Update driver status
+      await updateDoc2('drivers', driverId, {
+        status:       'On Delivery',
+        currentOrder: orderId
+      });
+
+      toast(driver.name + ' assigned to order #' + orderId + ' ✓', 'ok');
+
+      // Reset dropdowns
+      document.getElementById('assignOrderSel').value  = '';
+      document.getElementById('assignDriverSel').value = '';
+
+    } catch(err) {
+      toast('Error: ' + err.message, 'err');
+      console.error(err);
+    }
+  };
+
+</script>
+</body>
+</html>
