@@ -1,0 +1,49 @@
+{
+  "project_info": {
+    "project_number": "983597733024",
+    "firebase_url": "https://petwell-24602-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "project_id": "petwell-24602",
+    "storage_bucket": "petwell-24602.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:983597733024:android:a338197f52869c51aaa5c5",
+        "android_client_info": {
+          "package_name": "com.example.firstly"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDxdjCuEIrtNXerJjqxWybzIhX2ahLQQ8Y"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:983597733024:android:7d8d120083ccf28faaa5c5",
+        "android_client_info": {
+          "package_name": "com.example.petwell"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDxdjCuEIrtNXerJjqxWybzIhX2ahLQQ8Y"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
